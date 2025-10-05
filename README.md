@@ -344,5 +344,3 @@ pip install -r requirements.txt
 * Start **API** → `uvicorn api.main:app --reload --port 8000`
 * Start **UI** → `streamlit run ui/streamlit_app.py`
 * Drop files into **data/** or **Upload** via the sidebar → **Analyze** 🎉
-
-If you want, I can also generate a **`requirements.txt`** or a minimal **GitHub Actions** workflow for linting/tests.
