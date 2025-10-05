@@ -70,14 +70,6 @@ call-analytics-app/
 
 ---
 
-## 🧩 Requirements
-
-* Windows 10/11
-* Python **3.11** (recommended)
-* Git (for version control)
-* (Optional) GitHub Desktop or GitHub CLI
-
----
 
 ## 🛠️ Setup (Windows)
 
