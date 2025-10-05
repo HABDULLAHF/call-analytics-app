@@ -1,76 +1,94 @@
 
 # 📞 Call Analytics App
 
-FastAPI + Streamlit app to analyze call logs by **Main Contact** and **Associated Contact**.
-Designed for Pakistani numbers (but robust to mixed formats). Timezone: **Asia/Karachi**.
+Analyze call logs by **Main Contact** and **Associated Contact** with a **FastAPI** backend and a **Streamlit** dashboard.
+Built for Pakistan MSISDN formats (but tolerant of mixed formats). Timezone: **Asia/Karachi**.
 
 ---
 
-## ✨ Features
+## ✨ What you get
 
-**Data ingestion (CSV/XLS/XLSX)** with automatic normalization:
+* **Smart data loader (CSV/XLS/XLSX)**
 
-* Column auto-detection for A/B parties, start/end times, duration, direction, call type.
-* Phone normalization to **MSISDN** (e.g., `0xxx…` → `92xxx…`, `3xxx…` → `92xxx…`).
-* **Hex tokens → labels** (e.g., `4A617A7A` → `Jazz`) for associated labels.
-* **Karachi timezone** applied; naive timestamps assumed **UTC** then converted.
-* If `end_datetime` is missing but `start_datetime` + `duration` exist → **computed**.
-* If `duration` is missing but `start_datetime` + `end_datetime` exist → **computed**.
+  * Auto-detect A/B parties, start/end datetimes, duration, direction, call type
+  * Phone normalization to MSISDN (e.g., `0xxx…` → `92xxx…`, `3xxx…` → `92xxx…`)
+  * **Hex-to-label** decoding (e.g., `4A617A7A` → `Jazz`)
+  * Apply **Asia/Karachi**; naive timestamps assumed **UTC** → converted to Karachi
+  * Missing fields are inferred:
 
-**Association logic**
+    * If `end_datetime` missing but `start_datetime` and `duration` exist → computed
+    * If `duration` missing but `start/end` exist → computed
+* **Unified schema**
 
-* `main_number` inferred from **filename** (e.g., `923007087230.xlsx`).
-* `associated_key` unified as **phone (preferred)** or **label** (fallback).
+  ```
+  main_number, associated_number, associated_label, associated_key,
+  start_datetime, end_datetime, duration_seconds,
+  date, day_name, time, direction, call_type, source_file
+  ```
+* **API (FastAPI)**
 
-**API (FastAPI)**
+  * `GET /health` — health + row count
+  * `GET /contacts?main=…` — associated contacts with counts and % share
+  * `GET /stats?main=…&associated=…` — filtered calls + aggregates
+  * `GET /stats_ai?main=…&associated=…` — (optional) OpenAI-powered structured analysis
+  * `GET /insights_ai?main=…&associated=…` — AI narrative insights *based on* simple model
+  * `POST /upload` + `POST /reload` — add data file and refresh memory
+* **UI (Streamlit)**
 
-* `GET /contacts?main=…` → associated contacts with call counts + % share.
-* `GET /stats?main=…&associated=…` → **simple (pandas) analytics** + aggregates.
-* `GET /stats_ai?main=…&associated=…` → **AI analytics (OpenAI)** on **main-only** rows.
-* `POST /upload` to add a file + `POST /reload` to refresh in-memory dataset.
-
-**UI (Streamlit)**
-
-* Enter **Main**; optionally filter by an **Associated** (phone or label).
-* **Per-Date Summary** (sorted): call count, timings, durations (each), date & day, per-date associated counts.
-* Charts: **Direction**, **Call Type**, **Hourly (0→23)**, **Duration histogram**.
-* KPI tiles: total/filtered calls, **% of main**, **total/avg/median duration**.
-* **Upload** CSV/XLSX from the sidebar (to API) + trigger reload.
-* **AI / Simple** toggle to switch between OpenAI and local (pandas) analytics.
-* Downloads: associated overview, per-date summary, filtered calls.
+  * Enter **Main**; optionally filter by an **Associated** (phone or label)
+  * **Mode toggle:** Simple (local analytics) or **AI (OpenAI)**
+  * **Per-Date Summary**: call count, timings, per-call durations, total/avg duration, associated counts by date
+  * Charts: Direction, Call Type, **Hourly (0–23 sorted)**, Duration histogram
+  * KPI tiles: total/filtered calls, selected contact share, total/avg/median duration
+  * **Upload** contacts via sidebar (to API) + one-click reload
+  * Download CSVs: associated overview, per-date summary, filtered calls
+  * If AI mode enabled: shows **all Simple outputs + AI Insights** at the end
 
 ---
 
-## 🗂️ Project Structure
+## 🧭 Architecture
+
+```mermaid
+flowchart TD
+    A[Data files in /data\nCSV / XLSX] --> B[Data Loader\n(app/dataloader.py)]
+    B --> C[In-memory DataFrame\n(CALLS_DF)]
+    C --> D[FastAPI\n(api/main.py)]
+    D -->|/health /contacts /stats| E[Streamlit UI\n(ui/streamlit_app.py)]
+    D -->|/stats_ai /insights_ai| F[OpenAI Client\n(models/ai_openai.py\nmodels/ai_insights.py)]
+    E -->|POST /upload\nPOST /reload| D
+```
+
+---
+
+## 🗂 Project layout
 
 ```
 call-analytics-app/
 ├─ api/
-│  └─ main.py                  # FastAPI app (endpoints, models, upload/reload)
+│  └─ main.py                   # FastAPI app (endpoints, models)
 ├─ app/
-│  └─ dataloader.py            # Loader + normalize + compute_stats (simple path)
-├─ models/
-│  ├─ analytics.py             # Simple (pandas) analytics helpers
-│  └─ ai_openai.py             # AI analytics via OpenAI (main-only slice + schema)
+│  └─ dataloader.py             # Loader + normalization + compute_stats
 ├─ config/
-│  ├─ settings.py              # Centralized config (reads from .env)
-│  └─ __init__.py
+│  └─ settings.py               # Centralized settings (reads env)
+├─ models/
+│  ├─ analytics.py              # Simple deterministic analytics (pandas)
+│  ├─ ai_openai.py              # Structured OpenAI analytics (optional)
+│  └─ ai_insights.py            # AI narrative insights from simple output
 ├─ ui/
-│  └─ streamlit_app.py         # Streamlit UI with AI/Simple toggle & uploads
-├─ data/                       # (ignored) Put your real datasets here
-├─ data-sample/                # (optional) Small anonymized samples for demo
-├─ .env.example                # Sample env with OPENAI_*
+│  └─ streamlit_app.py          # Streamlit dashboard (AI toggle included)
+├─ data/                        # Your private data (gitignored)
+├─ data-sample/                 # Optional small demo files
 ├─ requirements.txt
-├─ README.md
-└─ .gitignore
+├─ .env.example                 # Example env file
+├─ .gitignore
+└─ README.md
 ```
 
 ---
 
+## ⚙️ Setup (Windows)
 
-## 🛠️ Setup (Windows)
-
-### 1) Clone or create the folder
+### 1) Clone (or create) the project
 
 ```powershell
 cd "C:\Users\centu\OneDrive\Desktop"
@@ -78,15 +96,13 @@ git clone https://github.com/<you>/call-analytics-app.git
 cd call-analytics-app
 ```
 
-*(or create the folder manually and add files if not cloned yet)*
-
-### 2) Create & activate virtual environment
+### 2) Virtual environment
 
 ```powershell
 python -m venv .venv
-# If PowerShell blocks activation:
+# If execution policy blocks activation, run once:
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-# Then:
+# activate
 . .\.venv\Scripts\Activate.ps1
 ```
 
@@ -97,150 +113,77 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-> If you don’t have `requirements.txt` yet:
->
-> ```powershell
-> pip install fastapi uvicorn[standard] pandas openpyxl pytz requests pydantic streamlit python-dotenv
-> ```
-
----
-
-## 🔐 Configure Environment (OpenAI for AI mode)
-
-Copy `.env.example` to `.env` and fill in your key/model:
-
-```
-# .env
-OPENAI_API_KEY=sk-********************************
-OPENAI_MODEL=gpt-4o-mini    # or gpt-4.1-mini / gpt-4o etc.
-```
-
-The app reads these via `config/settings.py` (using `python-dotenv`).
-**Note:** `.env` is **.gitignored**—keep your key private.
-
----
-
-## ▶️ Run the Apps
-
-### Backend (FastAPI)
+If you don’t have `requirements.txt` yet:
 
 ```powershell
-# from project root (venv active)
+pip install fastapi uvicorn[standard] pandas openpyxl pytz requests pydantic streamlit python-dotenv openai
+```
+
+---
+
+## 🔐 Environment (OpenAI optional)
+
+Copy `.env.example` to `.env` and edit:
+
+```env
+# .env
+# Backend data folder (defaults to ./data)
+DATA_DIR=./data
+
+# OpenAI (optional: required only for AI modes)
+OPENAI_API_KEY=sk-xxx
+OPENAI_MODEL=gpt-4o-mini
+```
+
+The app reads these via `config/settings.py`.
+
+---
+
+## ▶️ Run
+
+### Start backend (FastAPI)
+
+```powershell
 uvicorn api.main:app --reload --port 8000
 ```
 
-* API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+* Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 * Health: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 
-### Frontend (Streamlit)
+### Start frontend (Streamlit)
 
-Open a **new terminal** (venv still active):
+Open a new terminal (with venv active):
 
 ```powershell
 streamlit run ui/streamlit_app.py
 ```
 
 * UI: [http://127.0.0.1:8501](http://127.0.0.1:8501)
-* Ensure **API_URL** in the sidebar points to your backend (default `http://127.0.0.1:8000`).
-* Use the **AI / Simple** toggle at the top of the page:
-
-  * **Simple** → local pandas analytics (fastest, offline).
-  * **AI** → OpenAI-powered analysis using **only MAIN rows**.
+* In the sidebar, make sure **API URL** points to `http://127.0.0.1:8000`.
 
 ---
 
-## 📥 Adding Data
+## 📥 Add data
 
-* Put `.csv`, `.xlsx`, `.xls` files into `data/`.
-  **Name each file with the main number** (e.g., `923007087230.xlsx`).
-* Or use the **Streamlit sidebar → Upload Contacts**:
+* Drop `.csv` / `.xlsx` / `.xls` files into **`data/`**.
+  **File name should be the main number**, e.g., `923007087230.xlsx`.
+* Or use **Streamlit → sidebar → Upload Contacts** to send the file to the API (`POST /upload`), then **/reload**.
 
-  * **API (/upload)**: posts the file to your backend then triggers `/reload`.
+**Recommended columns** (auto-detected even if named differently):
 
-### Optional API endpoints for upload/reload
+* A-party (caller): `a_number`, `a party`, `calling`, `from`, …
+* B-party (callee): `b_number`, `b party`, `called`, `to`, …
+* Start time: `datetime`, `date_time`, `start_time`, `call_time`, …
+* End time: `end_time`, `end`
+* Duration: `duration`, `call_duration`, `talk_time`
+* Direction: `direction`, `call_direction`
+* Type: `call_type`, `type`, `category`
 
-(Already included in `api/main.py`—shown for reference.)
-
-```python
-from fastapi import UploadFile, File
-
-DATA_DIR = os.environ.get("DATA_DIR", os.path.join(os.path.dirname(__file__), "..", "data"))
-CALLS_DF = load_calls(DATA_DIR)
-
-@app.post("/upload")
-async def upload(file: UploadFile = File(...)):
-    dest = os.path.join(DATA_DIR, file.filename)
-    with open(dest, "wb") as f:
-        f.write(await file.read())
-    return {"status": "saved", "path": dest}
-
-@app.post("/reload")
-def reload_data():
-    global CALLS_DF
-    CALLS_DF = load_calls(DATA_DIR)
-    return {"status": "reloaded", "rows": int(len(CALLS_DF))}
-```
+Noisy fields (IMSI/IMEI/LAC/Cell/Lat/Lon…) are ignored.
 
 ---
 
-## 🧠 Analytics (Simple vs AI)
-
-Both paths compute the same outputs for the selected **MAIN** (and optional **ASSOCIATED**):
-
-1. **Call Count** (number of times contacted)
-2. **Call Timing** (times per call)
-3. **Call Duration** (per call)
-4. **Date & Day** (per call)
-5. **Date-wise Sorting** (chronological)
-6. **Contact Percentage** (calls to the selected associated ÷ all main calls)
-
-### Simple (Pandas) path
-
-* Implemented in `app/dataloader.py::compute_stats` and `models/analytics.py`.
-* Fast, offline, deterministic.
-
-### AI (OpenAI) path
-
-* Implemented in `models/ai_openai.py` with **structured JSON schema**.
-* **Always sends only MAIN’s rows** to the model; if `associated` is provided, the model computes its stats **within the main-only slice**.
-* Falls back gracefully (with an `error` field) if the API key/model is missing.
-
----
-
-## 🧠 Data Rules (Normalization)
-
-* **Phone numbers** (`normalize_number`)
-
-  * Strip non-digits.
-  * If starts with `92` and len ≥ 12 → keep.
-  * If starts with `0` and len ≥ 11 → `92` + local without `0`.
-  * If starts with `3` and len ≥ 10 → `92` + number.
-  * Else if len ≥ 10 → keep digits.
-
-* **Labels from hex** (e.g., `4A617A7A` → `Jazz`) via `maybe_decode_hex_token`.
-
-* **Datetime**
-
-  * Parse any standard format; if **naive**, assume UTC → convert to **Asia/Karachi**.
-
-* **Duration**: supports `HH:MM:SS`, `MM:SS`, `"45 sec"`, raw seconds.
-
-* **End time inference**
-
-  * If `end_datetime` missing but `start_datetime` & `duration` exist → compute.
-  * If `duration` missing but `start_datetime` & `end_datetime` exist → compute.
-
-* **Unified schema** (returned):
-
-  ```
-  main_number, associated_number, associated_label, associated_key,
-  start_datetime, end_datetime, duration_seconds,
-  date, day_name, time, direction, call_type, source_file
-  ```
-
----
-
-## 🌐 API Endpoints
+## 🌐 API overview
 
 ### `GET /health`
 
@@ -250,133 +193,88 @@ Both paths compute the same outputs for the selected **MAIN** (and optional **AS
 
 ### `GET /contacts?main=<msisdn>`
 
-Returns grouped associated contacts for the given `main`.
+Associated contacts for the given main, with call counts and percent share.
 
 ```json
 {
   "total_calls": 120,
   "contacts": [
-    {"associated_key":"923001234567","call_count":38,"percent":31.67},
-    {"associated_key":"Jazz","call_count":25,"percent":20.83}
+    {"associated_key": "923001234567", "call_count": 38, "percent": 31.67},
+    {"associated_key": "Jazz", "call_count": 25, "percent": 20.83}
   ]
 }
 ```
 
-### `GET /stats?main=<msisdn>[&associated=<phone-or-label>]` (Simple)
+### `GET /stats?main=<msisdn>[&associated=<phone-or-label>]`
 
-Returns the filtered call list (sorted), KPIs & aggregates.
+Deterministic analytics (Simple model): filtered calls, KPIs, per-date summary, direction/type/hourly aggregates.
 
-### `GET /stats_ai?main=<msisdn>[&associated=<phone-or-label>]` (AI)
+### `GET /stats_ai?main=<msisdn>[&associated=…]`
 
-Same structure as `/stats`, but computed by OpenAI using **main-only** rows.
+Structured analytics using OpenAI (optional). Same shape as simple model payload; falls back safely on errors.
 
-Example (truncated):
+### `GET /insights_ai?main=<msisdn>[&associated=…]`
 
-```json
-{
-  "total_calls": 120,
-  "percent_of_total": 31.67,
-  "contacts": [...],
-  "calls": [...],
-  "direction_counts":[{"direction":"Outgoing","count":70},{"direction":"Incoming","count":50}],
-  "call_type_counts":[{"call_type":"Voice","count":110},{"call_type":"SMS","count":10}],
-  "duration_summary":{
-    "total_sec":54000,"avg_sec":450,"median_sec":300,
-    "max_sec":2400,"min_sec":5,
-    "total_hms":"15:00:00","avg_hms":"0:07:30","median_hms":"0:05:00","max_hms":"0:40:00","min_hms":"0:00:05"
-  },
-  "hourly_counts":{"0":0,"1":1,...,"23":2}
-}
-```
+Narrative **insights** based on the **simple** model output (so it never invents numbers).
+
+### `POST /upload` + `POST /reload`
+
+Upload a file to the backend and reload the in-memory dataset.
 
 ---
 
-## 🖥️ UI Highlights (Streamlit)
+## 🖥️ Streamlit dashboard
 
-* **Associated Overview**: calls and % share for each associated.
-* **Per-Date Summary** (sorted):
+* **Analysis Mode**:
 
-  * **Associated (counts)** per date
-  * **Call Count**, **Call Timing** (list), **Call Durations (each)**
-  * **Total** & **Average Duration**
-* **Charts**: Direction / Call Type (bar), Duration histogram, **Time of Day (0→23)**.
-* **Downloads**: associated overview, per-date summary, filtered calls.
-* **Uploads**: add CSV/XLSX to backend and reload.
+  * **Analysis** → purely deterministic from `/stats`
+  * **AI (OpenAI)** → everything from Analysis **plus** “AI Insights” section at the bottom
+* **Per-Date Summary**: call count, timings, durations (each), total & average duration, associated counts per date
+* **Charts**: Direction, Call Type, **Hourly** (always 0→23), Duration histogram
+* **Downloads**: Associated overview, Per-date summary, Filtered calls
 
 ---
 
-## 🪛 Troubleshooting
+## 🧠 How AI is used (optional)
 
-**PowerShell “running scripts is disabled”**
+* **`/stats_ai` (models/ai_openai.py)**
+  Structured Outputs or tool-calling to mirror the simple payload shape.
+* **`/insights_ai` (models/ai_insights.py)**
+  Takes the **simple model output**, condenses it, and asks OpenAI for succinct **markdown insights**.
+  If OpenAI is not configured, the app continues in **Analysis** mode only.
 
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-```
-
-**Streamlit can’t reach API**
-
-* Start FastAPI first (`uvicorn api.main:app --reload --port 8000`).
-* In Streamlit sidebar, set `API_URL` to `http://127.0.0.1:8000`.
-
-**Empty charts / KeyError**
-
-* The UI protects against empty frames, but if filters return no rows you’ll see empty sections.
-
-**Karachi timezone**
-
-* Naive timestamps assumed UTC → converted to `Asia/Karachi`.
-
-**End time missing**
-
-* Loader computes `end_datetime = start_datetime + duration` if possible.
-
-**AI mode errors**
-
-* Ensure `.env` has `OPENAI_API_KEY` and `OPENAI_MODEL`.
-* If OpenAI returns schema errors, we fall back to a safe payload with an `error` note.
+> AI never fabricates records—it summarizes and highlights patterns already computed by the app.
 
 ---
 
 ## 🔒 Privacy
 
-* `data/` is **.gitignored** to avoid pushing sensitive call records.
-* Use `data-sample/` with tiny anonymized files for demos.
+* **`data/`** is **gitignored** by default. Keep real logs private.
+* Use `data-sample/` for demos.
 
 ---
 
-## 📦 Dependencies
+## 🪛 Troubleshooting
 
-* `fastapi`, `uvicorn[standard]`
-* `pandas`, `openpyxl`, `pytz`
-* `pydantic`
-* `requests`
-* `streamlit`
-* `python-dotenv`
-* `openai` (for AI mode)
+* **Cannot activate venv on PowerShell**
+  Run once:
 
-Install with:
-
-```powershell
-pip install -r requirements.txt
-```
-
----
-
-## 🧩 Extensibility
-
-* Add column heuristics in `app/dataloader.py::_find_col`.
-* Add new aggregates in API and surface in the UI.
-* Switch timezone by editing `KARACHI_TZ` in `dataloader.py`.
-* Replace AI model/version via `.env` without code changes.
+  ```powershell
+  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+  ```
+* **Streamlit cannot reach API**
+  Start FastAPI first and set the **API URL** in the sidebar.
+* **“Out of range float values are not JSON compliant”**
+  We sanitize NaN/Inf in API responses; if you extended endpoints, ensure you `jsonable_encoder` and sanitize NaN/Inf→`None`.
+* **OpenAI errors**
+  Check `.env` has `OPENAI_API_KEY` and valid `OPENAI_MODEL`. The app falls back to Analysis mode automatically.
 
 ---
 
-## ✅ Quick Start
+## ✅ Ready
 
-1. **API** → `uvicorn api.main:app --reload --port 8000`
-2. **UI** → `streamlit run ui/streamlit_app.py`
-3. Drop files into **data/** or **Upload** via the sidebar → **Analyze** 🎉
+* Start **API** → `uvicorn api.main:app --reload --port 8000`
+* Start **UI** → `streamlit run ui/streamlit_app.py`
+* Upload or drop files to **data/** → Explore! 🎉
 
-*Use the **AI/Simple** toggle at the top to switch engines.*
-
-
+---
