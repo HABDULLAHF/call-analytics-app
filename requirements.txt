@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+openpyxl
+pydantic
+requests
+streamlit
+pytz
+matplotlib
+python-multipart

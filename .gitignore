@@ -1,0 +1,18 @@
+@'
+__pycache__/
+*.py[cod]
+.venv/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.ipynb_checkpoints/
+build/
+dist/
+*.log
+# data ignored by default (keep private/heavy out of repo)
+data/
+!data/.gitkeep
+'@ | Out-File -Encoding utf8 .gitignore
+
+New-Item -ItemType File -Path data\.gitkeep -Force | Out-Null
