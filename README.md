@@ -1,6 +1,3 @@
-Awesome—here’s an **updated README** that folds in the new **AI mode** (OpenAI), centralized config, endpoints, and UI toggle—plus Windows-friendly steps.
-
----
 
 # 📞 Call Analytics App
 
