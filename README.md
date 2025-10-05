@@ -379,37 +379,4 @@ pip install -r requirements.txt
 
 *Use the **AI/Simple** toggle at the top to switch engines.*
 
-## 🏗️ Architecture
-
-```mermaid
-flowchart LR
-  subgraph User["User (Browser)"]
-    UI[Streamlit UI]
-  end
-
-  subgraph Backend["Backend (FastAPI)"]
-    API[REST Endpoints\n(/health, /contacts, /stats, /stats_ai, /upload, /reload)]
-    DL[Dataloader & Normalizer\n(CSV/XLSX → unified schema)]
-    SIMPLE[Simple Analytics\n(Pandas)]
-    AI[AI Analytics\n(OpenAI Structured JSON)]
-  end
-
-  subgraph Storage["Local Files"]
-    DATA[data/ *.csv *.xlsx]
-    CFG[.env / config/settings.py]
-  end
-
-  subgraph OpenAI["OpenAI API (optional)"]
-    GPT[Model\n(OPENAI_MODEL)]
-  end
-
-  UI -- API_URL --> API
-  API <-- upload/reload --> DATA
-  API --> DL
-  DL --> SIMPLE
-  DL --> AI
-  SIMPLE -- /stats --> UI
-  AI -- /stats_ai --> UI
-  CFG -. reads keys/models .-> AI
-  AI -- calls --> GPT
 
