@@ -314,7 +314,7 @@ def load_calls(data_path: str) -> pd.DataFrame:
     combined = pd.concat(all_data, ignore_index=True)
 
     # Require at least main and a usable associated_key (number or label)
-    combined = combined.dropna(subset=["main_number", "associated_key"], how="any")
+    #combined = combined.dropna(subset=["main_number", "associated_key"], how="any")
 
     # Ensure all expected columns exist
     expected_cols = [
@@ -327,9 +327,9 @@ def load_calls(data_path: str) -> pd.DataFrame:
             combined[col] = None
 
     # Deduplicate
-    combined = combined.drop_duplicates(
-        subset=["main_number", "associated_key", "start_datetime"], keep="first"
-    )
+    #combined = combined.drop_duplicates(
+    #    subset=["main_number", "associated_key", "start_datetime"], keep="first"
+    #)
 
     print(f"✅ Loaded {len(combined)} records across {len(all_data)} files.")
     return combined[expected_cols]
