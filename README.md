@@ -50,12 +50,12 @@ Built for Pakistan MSISDN formats (but tolerant of mixed formats). Timezone: **A
 
 ```mermaid
 flowchart TD
-    A[Data files in /data\nCSV / XLSX] --> B[Data Loader\n(app/dataloader.py)]
-    B --> C[In-memory DataFrame\n(CALLS_DF)]
-    C --> D[FastAPI\n(api/main.py)]
-    D -->|/health /contacts /stats| E[Streamlit UI\n(ui/streamlit_app.py)]
-    D -->|/stats_ai /insights_ai| F[OpenAI Client\n(models/ai_openai.py\nmodels/ai_insights.py)]
-    E -->|POST /upload\nPOST /reload| D
+    A[Data files in /data\nCSV / XLSX] --> B[Data Loader (app/dataloader.py)]
+    B --> C[In-memory DataFrame (CALLS_DF)]
+    C --> D[FastAPI (api/main.py)]
+    D -->|/health /contacts /stats| E[Streamlit UI (ui/streamlit_app.py)]
+    D -->|/stats_ai /insights_ai| F[OpenAI Client (models/ai_openai.py\nmodels/ai_insights.py)]
+    E -->|POST /upload POST /reload| D
 ```
 
 ---
