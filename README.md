@@ -1,6 +1,3 @@
-# call-analytics-app
-
----
 
 # 📞 Call Analytics App
 
