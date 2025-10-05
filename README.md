@@ -378,3 +378,35 @@ pip install -r requirements.txt
 3. Drop files into **data/** or **Upload** via the sidebar → **Analyze** 🎉
 
 *Use the **AI/Simple** toggle at the top to switch engines.*
+
+
+flowchart LR
+  subgraph User["User (Browser)"]
+    UI[Streamlit UI]
+  end
+
+  subgraph Backend["Backend (FastAPI)"]
+    API[REST Endpoints<br/>(/health, /contacts, /stats, /stats_ai, /upload, /reload)]
+    DL[Dataloader & Normalizer<br/>(CSV/XLSX → unified schema)]
+    SIMPLE[Simple Analytics<br/>(Pandas)]
+    AI[AI Analytics<br/>(OpenAI Structured JSON)]
+  end
+
+  subgraph Storage["Local Files"]
+    DATA[data/ *.csv *.xlsx]
+    CFG[.env / config/settings.py]
+  end
+
+  subgraph OpenAI["OpenAI API"]
+    GPT[Model<br/>(OPENAI_MODEL)]
+  end
+
+  UI -- API_URL --> API
+  API <-- upload/reload --> DATA
+  API --> DL
+  DL --> SIMPLE
+  DL --> AI
+  SIMPLE -- /stats --> UI
+  AI -- /stats_ai --> UI
+  CFG -. reads keys/models .-> AI
+  AI -- calls --> GPT
