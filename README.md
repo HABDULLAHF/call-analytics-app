@@ -388,10 +388,10 @@ flowchart LR
   end
 
   subgraph Backend["Backend (FastAPI)"]
-    API[REST Endpoints<br/>(/health, /contacts, /stats, /stats_ai, /upload, /reload)]
-    DL[Dataloader & Normalizer<br/>(CSV/XLSX → unified schema)]
-    SIMPLE[Simple Analytics<br/>(Pandas)]
-    AI[AI Analytics<br/>(OpenAI Structured JSON)]
+    API[REST Endpoints\n(/health, /contacts, /stats, /stats_ai, /upload, /reload)]
+    DL[Dataloader & Normalizer\n(CSV/XLSX → unified schema)]
+    SIMPLE[Simple Analytics\n(Pandas)]
+    AI[AI Analytics\n(OpenAI Structured JSON)]
   end
 
   subgraph Storage["Local Files"]
@@ -400,7 +400,7 @@ flowchart LR
   end
 
   subgraph OpenAI["OpenAI API (optional)"]
-    GPT[Model<br/>(OPENAI_MODEL)]
+    GPT[Model\n(OPENAI_MODEL)]
   end
 
   UI -- API_URL --> API
@@ -412,3 +412,4 @@ flowchart LR
   AI -- /stats_ai --> UI
   CFG -. reads keys/models .-> AI
   AI -- calls --> GPT
+
