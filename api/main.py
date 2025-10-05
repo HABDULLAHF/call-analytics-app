@@ -15,6 +15,8 @@ from config.settings import settings
 from app.dataloader import load_calls
 from models.analytics import simple_model  # server-side pandas analytics
 from models.ai_openai import ai_model_openai  # OpenAI-powered analytics
+# near other imports
+from models.ai_insights import ai_insights_from_simple
 
 # =============================================================================
 # App & data
@@ -95,6 +97,71 @@ class StatsResponse(BaseModel):
 # =============================================================================
 # Helpers (NaN/Inf-safe + aggregates)
 # =============================================================================
+
+
+# --- JSON sanitizers ---
+import math
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+
+def _is_na_like(x) -> bool:
+    try:
+        # catches pandas NA/NaT/NaN etc.
+        import pandas as pd  # already installed
+        if pd.isna(x):
+            return True
+    except Exception:
+        pass
+    return False
+
+def _finite_float_or_none(x):
+    try:
+        f = float(x)
+        return f if math.isfinite(f) else None
+    except Exception:
+        return None
+
+def _sanitize_scalar(x):
+    # order matters: NA-like first
+    if _is_na_like(x):
+        return None
+    if isinstance(x, float):
+        return x if math.isfinite(x) else None
+    return x
+
+def _normalize_hourly(obj):
+    """
+    Ensure hourly_counts is a dict with string keys "0".."23" and integer values (no NaN/Inf).
+    """
+    base = {str(h): 0 for h in range(24)}
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            try:
+                h = int(k)
+                if 0 <= h <= 23:
+                    base[str(h)] = int(_finite_float_or_none(v) or 0)
+            except Exception:
+                continue
+    return base
+
+def sanitize(obj):
+    """
+    Recursively sanitize dict/list/scalars: replace NaN/NaT/Inf with None,
+    normalize hourly_counts to "0".."23" keys, and coerce nested structures.
+    """
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if k == "hourly_counts":
+                out[k] = _normalize_hourly(v)
+            else:
+                out[k] = sanitize(v)
+        return out
+    elif isinstance(obj, list):
+        return [sanitize(v) for v in obj]
+    else:
+        return _sanitize_scalar(obj)
+    
 def _str_or_none(v) -> Optional[str]:
     try:
         if v is None or pd.isna(v):
@@ -376,6 +443,16 @@ def stats_ai(
     safe = _json_sanitize(resp.model_dump())
     return JSONResponse(content=jsonable_encoder(safe), status_code=200)
 
+
+
+@app.get("/insights_ai")
+def insights_ai(main: str, associated: Optional[str] = None):
+    simple_payload = simple_model(CALLS_DF, main, associated)  # <-- dict
+    insights_md = ai_insights_from_simple(simple_payload, main, associated)
+    resp = {"simple_payload": simple_payload, "insights_md": insights_md, "error": None}
+    safe = sanitize(resp)
+    return JSONResponse(content=jsonable_encoder(safe), status_code=200)
+
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -389,3 +466,4 @@ def reload_data():
     global CALLS_DF
     CALLS_DF = load_calls(DATA_DIR)
     return {"status": "reloaded", "rows": int(len(CALLS_DF))}
+
