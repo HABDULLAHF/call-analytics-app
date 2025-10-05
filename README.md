@@ -379,7 +379,9 @@ pip install -r requirements.txt
 
 *Use the **AI/Simple** toggle at the top to switch engines.*
 
+## 🏗️ Architecture
 
+```mermaid
 flowchart LR
   subgraph User["User (Browser)"]
     UI[Streamlit UI]
@@ -397,7 +399,7 @@ flowchart LR
     CFG[.env / config/settings.py]
   end
 
-  subgraph OpenAI["OpenAI API"]
+  subgraph OpenAI["OpenAI API (optional)"]
     GPT[Model<br/>(OPENAI_MODEL)]
   end
 
