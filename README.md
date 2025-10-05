@@ -283,3 +283,7 @@ Upload a file to the backend and reload the in-memory dataset.
 * Upload or drop files to **data/** → Explore! 🎉
 
 ---
+
+🎥 Demo
+
+▶️ Watch the demo on Loom: https://www.loom.com/share/2bc9d6ed55f64122bb01f32023043cd9?sid=85d44088-91c2-48c6-b9c5-89c5a2d6cb0f
