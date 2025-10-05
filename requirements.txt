@@ -9,3 +9,5 @@ streamlit
 pytz
 matplotlib
 python-multipart
+openai
+pydantic-settings

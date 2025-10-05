@@ -415,3 +415,4 @@ def compute_stats(df: pd.DataFrame, main_number: str, associated: Optional[str] 
         "calls": calls,
         "percent_of_total": percent,
     }
+
